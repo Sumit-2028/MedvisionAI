@@ -3,6 +3,11 @@ import uuid
 import io
 import json
 from app.services.report_service import generate_medical_report
+from sqlalchemy import func
+# ============================================================
+# FastAPI Imports
+# ============================================================
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -12,6 +17,8 @@ from fastapi import (
     UploadFile,
     status
 )
+
+from fastapi.responses import FileResponse
 
 from PIL import Image
 
@@ -53,6 +60,9 @@ ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
     "image/png"
 }
+
+
+
 
 
 # ============================================================
@@ -423,6 +433,307 @@ async def upload_xray(
         "uploaded_by": current_user.user_id
     }
 
+
+@router.get("/dashboard-stats")
+def get_dashboard_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Find the logged-in user's patient profile
+    patient = (
+        db.query(Patient)
+        .filter(Patient.user_id == current_user.user_id)
+        .first()
+    )
+
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient profile not found"
+        )
+
+    # Total analyses performed by this patient
+    total_analyses = (
+        db.query(Diagnosis)
+        .filter(
+            Diagnosis.patient_id == patient.patient_id
+        )
+        .count()
+    )
+
+    # Abnormal analyses
+    abnormal_results = (
+        db.query(Diagnosis)
+        .filter(
+            Diagnosis.patient_id == patient.patient_id,
+            Diagnosis.result_status == "ABNORMAL"
+        )
+        .count()
+    )
+
+    # Normal analyses
+    normal_results = (
+        db.query(Diagnosis)
+        .filter(
+            Diagnosis.patient_id == patient.patient_id,
+            Diagnosis.result_status == "NORMAL"
+        )
+        .count()
+    )
+
+    return {
+        "total_analyses": total_analyses,
+        "abnormal_results": abnormal_results,
+        "normal_results": normal_results
+    }
+
+# ============================================================
+# DOWNLOAD MEDICAL REPORT
+# ============================================================
+# Returns the generated PDF medical report.
+#
+# Endpoint:
+# GET /diagnosis/report/{report_id}
+#
+# Security:
+# The report must belong to the currently logged-in user.
+# ============================================================
+
+@router.get("/report/{report_id}")
+def download_medical_report(
+    report_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    # --------------------------------------------------------
+    # Find the patient's profile for the logged-in user
+    # --------------------------------------------------------
+
+    patient = (
+        db.query(Patient)
+        .filter(
+            Patient.user_id == current_user.user_id
+        )
+        .first()
+    )
+
+    if patient is None:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient profile not found"
+        )
+
+
+    # --------------------------------------------------------
+    # Find the requested medical report
+    # --------------------------------------------------------
+    # Join through Diagnosis so we can verify that this
+    # report belongs to the logged-in patient's diagnosis.
+    # --------------------------------------------------------
+
+    medical_report = (
+        db.query(MedicalReport)
+        .join(
+            Diagnosis,
+            MedicalReport.diagnosis_id ==
+            Diagnosis.diagnosis_id
+        )
+        .filter(
+            MedicalReport.report_id == report_id,
+            Diagnosis.patient_id == patient.patient_id
+        )
+        .first()
+    )
+
+
+    # --------------------------------------------------------
+    # Report does not exist or does not belong to user
+    # --------------------------------------------------------
+
+    if medical_report is None:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medical report not found"
+        )
+
+
+    # --------------------------------------------------------
+    # Check that the PDF path exists in the database
+    # --------------------------------------------------------
+
+    if not medical_report.report_path:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medical report file is not available"
+        )
+
+
+    # --------------------------------------------------------
+    # Check that the actual PDF file exists
+    # --------------------------------------------------------
+
+    if not os.path.exists(medical_report.report_path):
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medical report file could not be found"
+        )
+
+
+    # --------------------------------------------------------
+    # Return the PDF file
+    # --------------------------------------------------------
+
+    return FileResponse(
+        path=medical_report.report_path,
+        media_type="application/pdf",
+        filename=f"MedVisionAI_Report_{report_id}.pdf"
+    )
+
+# ============================================================
+# GET DIAGNOSIS HISTORY
+# ============================================================
+# Returns all previous X-ray analyses for the logged-in
+# patient's account.
+#
+# Each history record also includes report_id so the frontend
+# can download the corresponding generated PDF report.
+# ============================================================
+
+@router.get("/history")
+def get_diagnosis_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    # --------------------------------------------------------
+    # Find patient belonging to logged-in user
+    # --------------------------------------------------------
+
+    patient = (
+        db.query(Patient)
+        .filter(
+            Patient.user_id == current_user.user_id
+        )
+        .first()
+    )
+
+    if patient is None:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient profile not found"
+        )
+
+
+    # --------------------------------------------------------
+    # Get all diagnoses for this patient
+    # --------------------------------------------------------
+
+    diagnoses = (
+        db.query(Diagnosis)
+        .filter(
+            Diagnosis.patient_id == patient.patient_id
+        )
+        .order_by(
+            Diagnosis.diagnosis_timestamp.desc()
+        )
+        .all()
+    )
+
+
+    # --------------------------------------------------------
+    # Prepare history response
+    # --------------------------------------------------------
+
+    history = []
+
+
+    for diagnosis in diagnoses:
+
+        # ----------------------------------------------------
+        # Parse stored findings JSON
+        # ----------------------------------------------------
+
+        findings = json.loads(
+            diagnosis.findings_json
+        )
+
+
+        # ----------------------------------------------------
+        # Find the medical report associated with this
+        # diagnosis.
+        # ----------------------------------------------------
+
+        medical_report = (
+            db.query(MedicalReport)
+            .filter(
+                MedicalReport.diagnosis_id ==
+                diagnosis.diagnosis_id
+            )
+            .first()
+        )
+
+
+        # ----------------------------------------------------
+        # Add diagnosis + report information
+        # ----------------------------------------------------
+
+        history.append({
+
+            "diagnosis_id":
+                diagnosis.diagnosis_id,
+
+            "report_id":
+                medical_report.report_id
+                if medical_report
+                else None,
+
+            "predicted_disease":
+                diagnosis.predicted_disease,
+
+            "confidence_score":
+                round(
+                    diagnosis.confidence_score * 100,
+                    2
+                ),
+
+            "result_status":
+                diagnosis.result_status,
+
+            "findings":
+                findings,
+
+            "image_path":
+                diagnosis.image_path,
+
+            "timestamp":
+                diagnosis.diagnosis_timestamp
+
+        })
+
+
+    # --------------------------------------------------------
+    # Return history
+    # --------------------------------------------------------
+
+    return {
+
+        "patient_id":
+            patient.patient_id,
+
+        "total_reports":
+            len(history),
+
+        "history":
+            history
+
+    }
+
 # ============================================================
 # GET SINGLE DIAGNOSIS
 # ============================================================
@@ -550,92 +861,4 @@ def get_diagnosis(
             "research and decision-support purposes "
             "and is not a definitive medical diagnosis."
     }
-# ============================================================
-# GET DIAGNOSIS HISTORY
-# ============================================================
-
-@router.get("/history")
-def get_diagnosis_history(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-
-    # Find patient belonging to logged-in user
-
-    patient = (
-        db.query(Patient)
-        .filter(
-            Patient.user_id == current_user.user_id
-        )
-        .first()
-    )
-
-    if patient is None:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient profile not found"
-        )
-
-
-    # Get all diagnoses for this patient
-
-    diagnoses = (
-        db.query(Diagnosis)
-        .filter(
-            Diagnosis.patient_id == patient.patient_id
-        )
-        .order_by(
-            Diagnosis.diagnosis_timestamp.desc()
-        )
-        .all()
-    )
-
-
-    history = []
-
-    for diagnosis in diagnoses:
-
-        findings = json.loads(
-            diagnosis.findings_json
-        )
-
-        history.append({
-
-            "diagnosis_id": diagnosis.diagnosis_id,
-
-            "predicted_disease":
-                diagnosis.predicted_disease,
-
-            "confidence_score":
-                round(
-                    diagnosis.confidence_score * 100,
-                    2
-                ),
-
-            "result_status":
-                diagnosis.result_status,
-
-            "findings":
-                findings,
-
-            "image_path":
-                diagnosis.image_path,
-
-            "timestamp":
-                diagnosis.diagnosis_timestamp
-
-        })
-
-
-    return {
-
-        "patient_id": patient.patient_id,
-
-        "total_reports": len(history),
-
-        "history": history
-
-    }
-
 
