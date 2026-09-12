@@ -138,7 +138,7 @@ export default function History() {
   // ==========================================================
 
   useEffect(() => {
-    fetchHistory();
+    void Promise.resolve().then(() => fetchHistory());
   }, []);
 
   // ==========================================================

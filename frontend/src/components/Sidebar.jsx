@@ -14,7 +14,6 @@
 // ============================================================
 
 import {
-  Activity,
   FileText,
   HeartPulse,
   History,
@@ -119,8 +118,8 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
   // ==========================================================
 
   const isActive = (path) => {
-    if (path === "/dashboard") {
-      return location.pathname === "/dashboard";
+    if (path === "/dashboard" || path === "/admin") {
+      return location.pathname === path;
     }
 
     return (
@@ -225,26 +224,28 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
         <div className="flex-1 overflow-y-auto px-3 py-6">
           {/* Workspace Label */}
 
-          {!collapsed && (
-            <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Workspace
-            </p>
-          )}
+          {currentUser?.role !== "ADMIN" && (
+            <>
+              {!collapsed && (
+                <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Workspace
+                </p>
+              )}
 
-          {/* Main Navigation */}
+              {/* Main Navigation */}
 
-          <nav className="space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
+              <nav className="space-y-1">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
 
-              const active = isActive(item.path);
+                  const active = isActive(item.path);
 
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => handleNavigation(item.path)}
-                  title={collapsed ? item.label : undefined}
-                  className={`
+                  return (
+                    <button
+                      key={item.path}
+                      onClick={() => handleNavigation(item.path)}
+                      title={collapsed ? item.label : undefined}
+                      className={`
                     group
                     flex
                     w-full
@@ -262,25 +263,56 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
                         ? "bg-cyan-50 text-cyan-700"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     }
-                  `}
-                >
-                  {/* Icon */}
+                      `}
+                    >
+                      {/* Icon */}
 
-                  <Icon size={19} className="shrink-0" />
+                      <Icon size={19} className="shrink-0" />
 
-                  {/* Label */}
+                      {/* Label */}
 
-                  {!collapsed && <span>{item.label}</span>}
+                      {!collapsed && <span>{item.label}</span>}
 
-                  {/* Active Indicator */}
+                      {/* Active Indicator */}
 
-                  {!collapsed && active && (
-                    <span className="ml-auto h-2 w-2 rounded-full bg-cyan-600" />
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+                      {!collapsed && active && (
+                        <span className="ml-auto h-2 w-2 rounded-full bg-cyan-600" />
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </>
+          )}
+
+          {currentUser?.role === "ADMIN" && (
+            <>
+              {!collapsed && (
+                <p className="mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Administration
+                </p>
+              )}
+              <nav className="space-y-1">
+                {[
+                  ["Overview", "/admin", LayoutDashboard],
+                  ["Users", "/admin/users", Users],
+                  ["Patients", "/admin/patients", Users],
+                  ["Diagnoses", "/admin/diagnoses", FileText],
+                ].map(([label, path, Icon]) => (
+                  <button
+                    key={path}
+                    onClick={() => handleNavigation(path)}
+                    title={collapsed ? label : undefined}
+                    className={`flex w-full items-center rounded-xl py-3 text-sm font-medium transition ${collapsed ? "justify-center px-2" : "gap-3 px-4"} ${isActive(path) ? "bg-cyan-50 text-cyan-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                  >
+                    <Icon size={19} className="shrink-0" />
+                    {!collapsed && <span>{label}</span>}
+                    {!collapsed && isActive(path) && <span className="ml-auto h-2 w-2 rounded-full bg-cyan-600" />}
+                  </button>
+                ))}
+              </nav>
+            </>
+          )}
 
           {/* ==================================================
               System Section

@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
@@ -12,8 +12,7 @@ from app.database.models import (
 )
 from app.schemas.patient import PatientCreate
 from pydantic import BaseModel
-from passlib.context import CryptContext
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.core.security import hash_password, verify_password
 
 
 router = APIRouter(
@@ -33,7 +32,13 @@ class ChangePasswordRequest(BaseModel):
 def get_my_profile(
     current_user: User = Depends(get_current_user)
 ):
-    return current_user
+    return {
+        "user_id": current_user.user_id,
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "role": current_user.role,
+        "registration_date": current_user.registration_date,
+    }
 
 
 # =========================================================
@@ -456,8 +461,14 @@ def change_password(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.role == "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrative credentials are managed by the deployment configuration.",
+        )
+
     # Verify current password
-    if not pwd_context.verify(
+    if not verify_password(
         request.current_password,
         current_user.password
     ):
@@ -474,7 +485,7 @@ def change_password(
         )
 
     # Prevent using the same password
-    if pwd_context.verify(
+    if verify_password(
         request.new_password,
         current_user.password
     ):
@@ -484,7 +495,7 @@ def change_password(
         )
 
     # Hash the new password
-    current_user.password = pwd_context.hash(
+    current_user.password = hash_password(
         request.new_password
     )
 

@@ -1,6 +1,6 @@
 """add patient full name
 
-Revision ID: <864936074412>
+Revision ID: 864936074412
 Revises: edefe42d94c5
 Create Date: 2026-09-11
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "<864936074412>"
+revision = "864936074412"
 down_revision = "edefe42d94c5"
 branch_labels = None
 depends_on = None

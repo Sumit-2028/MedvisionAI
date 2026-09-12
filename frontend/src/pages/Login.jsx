@@ -162,7 +162,12 @@ function Login() {
       // REDIRECT TO DASHBOARD
       // ======================================================
 
-      navigate("/dashboard");
+      try {
+        const profile = await api.get("/users/me");
+        navigate(profile.data?.role === "ADMIN" ? "/admin" : "/dashboard");
+      } catch {
+        navigate("/dashboard");
+      }
     } catch (error) {
       // ======================================================
       // LOG ERROR

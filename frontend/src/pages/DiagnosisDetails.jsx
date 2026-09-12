@@ -204,8 +204,8 @@ function DiagnosisDetails() {
   // =========================================================
   // FORMAT DATE
   // =========================================================
-  const formattedDate = diagnosis?.timestamp
-    ? new Date(diagnosis.timestamp).toLocaleString()
+  const formattedDate = (diagnosis?.diagnosis_timestamp || diagnosis?.timestamp)
+    ? new Date(diagnosis.diagnosis_timestamp || diagnosis.timestamp).toLocaleString()
     : "Not available";
 
   return (

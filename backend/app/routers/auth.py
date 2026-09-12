@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
-from app.database.models import User, Patient
+from app.database.models import User
 from app.schemas.auth import (
     UserRegister,
     TokenResponse,
@@ -47,22 +47,14 @@ def register(
         full_name=user_data.full_name,
         email=user_data.email,
         password=hash_password(user_data.password),
-        role="USER"
+        role="PHYSICIAN"
     )
 
     db.add(new_user)
-    db.flush()
-
-    new_patient = Patient(
-        user_id=new_user.user_id
-    )
-
-    db.add(new_patient)
-
     db.commit()
     db.refresh(new_user)
 
-    return new_user
+    return UserResponse.model_validate(new_user)
 
 
 @router.post(
@@ -110,4 +102,3 @@ def login(
         "access_token": access_token,
         "token_type": "bearer"
     }
-    

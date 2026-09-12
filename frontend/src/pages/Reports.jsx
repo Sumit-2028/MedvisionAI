@@ -22,19 +22,8 @@ function Reports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // =========================================================
-  // LOAD REPORT HISTORY
-  // =========================================================
-
-  useEffect(() => {
-    loadReports();
-  }, []);
-
   const loadReports = async () => {
     try {
-      setLoading(true);
-      setError("");
-
       const response = await api.get("/diagnosis/history");
 
       const responseData = response.data;
@@ -58,6 +47,15 @@ function Reports() {
       setLoading(false);
     }
   };
+
+  // =========================================================
+  // LOAD REPORT HISTORY
+  // =========================================================
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadReports(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   // =========================================================
   // DOWNLOAD REPORT

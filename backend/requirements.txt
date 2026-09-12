@@ -35,3 +35,7 @@ typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.3
 uvicorn==0.52.4
+alembic==1.18.4
+reportlab==4.4.9
+torch==2.5.1
+torchvision==0.20.1

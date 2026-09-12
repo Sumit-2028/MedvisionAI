@@ -8,12 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.database.connection import engine
+from app.core.config import settings
 
 from app.database import models
 
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 from app.routers.diagnosis import router as diagnosis_router
+from app.routers.admin import router as admin_router
 
 
 # ============================================================
@@ -44,10 +46,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
 
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=settings.cors_origins,
 
     allow_credentials=True,
 
@@ -84,6 +83,7 @@ app.include_router(diagnosis_router)
 # ============================================================
 
 app.include_router(users_router)
+app.include_router(admin_router)
 
 
 # ============================================================
@@ -122,5 +122,5 @@ def health_check():
         return {
             "status": "unhealthy",
             "database": "disconnected",
-            "error": str(e)
+            "error": "Database connection failed"
         }

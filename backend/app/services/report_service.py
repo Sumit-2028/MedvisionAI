@@ -614,7 +614,7 @@ def generate_medical_report(
         ],
         [
             "Name",
-            safe_text(user.full_name)
+            safe_text(patient.full_name)
         ],
         [
             "Age",

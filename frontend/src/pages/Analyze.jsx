@@ -26,7 +26,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   Brain,
-  Calendar,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -34,7 +33,6 @@ import {
   FileImage,
   FileText,
   Loader2,
-  Phone,
   Plus,
   ScanLine,
   ShieldCheck,
@@ -377,7 +375,7 @@ export default function Analyze() {
       return;
     }
 
-    loadPatients();
+    void Promise.resolve().then(() => loadPatients());
   }, [workflowStep]);
 
   // ==========================================================

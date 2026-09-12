@@ -2,6 +2,7 @@ import os
 import uuid
 import io
 import json
+from pathlib import Path
 
 from fastapi import (
     APIRouter,
@@ -32,6 +33,9 @@ from app.services.model_service import predict_image
 from app.services.report_service import generate_medical_report
 
 
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+
 # ============================================================
 # ROUTER CONFIGURATION
 # ============================================================
@@ -47,7 +51,7 @@ router = APIRouter(
 # ============================================================
 
 # Directory where uploaded X-ray images will be stored.
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = str(BASE_DIR / "uploads")
 
 # Maximum allowed X-ray file size.
 # 10 MB is sufficient for the prototype.
@@ -327,7 +331,7 @@ async def upload_xray(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Model prediction failed: {str(e)}"
+            detail="Model prediction failed. Please try again later."
         )
 
 
@@ -720,6 +724,8 @@ def download_medical_report(
         .filter(
             MedicalReport.report_id == report_id,
             Patient.created_by == current_user.user_id
+            if current_user.role != "ADMIN"
+            else True
         )
         .first()
     )
@@ -753,9 +759,18 @@ def download_medical_report(
     # CHECK ACTUAL PDF FILE
     # ========================================================
 
-    if not os.path.exists(
-        medical_report.report_path
-    ):
+    report_path = Path(medical_report.report_path).resolve()
+    reports_root = (BASE_DIR / "reports").resolve()
+
+    try:
+        report_path.relative_to(reports_root)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medical report file could not be found"
+        )
+
+    if not report_path.is_file():
 
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -769,7 +784,7 @@ def download_medical_report(
 
     return FileResponse(
 
-        path=medical_report.report_path,
+        path=str(report_path),
 
         media_type="application/pdf",
 
@@ -962,6 +977,11 @@ def get_diagnosis_history(
                 diagnosis.image_path,
 
             "timestamp":
+                diagnosis.diagnosis_timestamp,
+
+            # Keep the explicit database field name available to newer
+            # clients while retaining timestamp for existing dashboard UI.
+            "diagnosis_timestamp":
                 diagnosis.diagnosis_timestamp
         })
 
