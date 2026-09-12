@@ -18,13 +18,13 @@
 // The sidebar remains visible while navigating between pages.
 // ============================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Bell, Menu } from "lucide-react";
-
+import api from "../services/api";
 import { Outlet } from "react-router-dom";
-
 import Sidebar from "../components/Sidebar";
+
 
 // ============================================================
 // Application Layout
@@ -45,6 +45,20 @@ export default function AppLayout() {
   // ----------------------------------------------------------
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const response = await api.get("/users/me");
+        setCurrentUser(response.data);
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+      }
+    };
+
+    loadCurrentUser();
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -139,11 +153,11 @@ export default function AppLayout() {
 
             <div className="hidden items-center gap-2 sm:flex">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-100 text-sm font-bold text-cyan-700">
-                U
+                {currentUser?.full_name?.charAt(0)?.toUpperCase() || "U"}
               </div>
 
               <span className="text-sm font-semibold text-slate-700">
-                Medical User
+                {currentUser?.full_name || "Medical User"}
               </span>
             </div>
           </div>

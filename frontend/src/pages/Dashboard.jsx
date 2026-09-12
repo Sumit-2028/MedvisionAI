@@ -20,6 +20,7 @@ import {
   ScanLine,
   ShieldCheck,
   Upload,
+  Users,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -37,11 +38,12 @@ export default function Dashboard() {
   // Dashboard Statistics State
   // ==========================================================
 
-  const [stats, setStats] = useState({
-    total_analyses: 0,
-    abnormal_results: 0,
-    normal_results: 0,
-  });
+ const [stats, setStats] = useState({
+   total_patients: 0,
+   total_analyses: 0,
+   abnormal_results: 0,
+   normal_results: 0,
+ });
 
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -111,6 +113,13 @@ export default function Dashboard() {
       : 0;
 
   const dashboardStats = [
+    {
+      title: "Total Patients",
+      value: loadingStats ? "..." : stats.total_patients,
+      icon: Users,
+      description: "Registered patients",
+    },
+
     {
       title: "Total Analyses",
       value: loadingStats ? "..." : stats.total_analyses,
@@ -196,7 +205,7 @@ export default function Dashboard() {
             Statistics
         ==================================================== */}
 
-        <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {dashboardStats.map((stat) => {
             const Icon = stat.icon;
 
@@ -431,6 +440,10 @@ export default function Dashboard() {
 
                       <div>
                         <p className="text-sm font-semibold text-slate-800">
+                          {report.patient_name || "Unknown Patient"}
+                        </p>
+
+                        <p className="mt-1 text-xs font-medium text-cyan-700">
                           {report.predicted_disease ||
                             "No abnormality detected"}
                         </p>

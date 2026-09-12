@@ -44,18 +44,13 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        default="USER"
+        default="PHYSICIAN"
     )
 
     registration_date: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
         nullable=False
-    )
-
-    patient: Mapped["Patient | None"] = relationship(
-        back_populates="user",
-        uselist=False
     )
 
     administrator: Mapped["Administrator | None"] = relationship(
@@ -73,22 +68,42 @@ class Patient(Base):
         primary_key=True
     )
 
-    user_id: Mapped[int] = mapped_column(
+    created_by: Mapped[int] = mapped_column(
         ForeignKey("users.user_id"),
-        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    full_name: Mapped[str] = mapped_column(
+        String(100),
         nullable=False
     )
 
-    age: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    contact_information: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    age: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True
+    )
 
-    user: Mapped["User"] = relationship(back_populates="patient")
+    gender: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True
+    )
+
+    contact_information: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
+
+    created_by_user: Mapped["User"] = relationship(
+        foreign_keys=[created_by]
+    )
+
     diagnoses: Mapped[list["Diagnosis"]] = relationship(
         back_populates="patient",
         cascade="all, delete-orphan"
     )
 
+    
 class Administrator(Base):
     __tablename__ = "administrators"
 

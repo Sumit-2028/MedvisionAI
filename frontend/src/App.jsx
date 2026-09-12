@@ -9,6 +9,11 @@ import History from "./pages/History";
 import Login from "./pages/Login";
 import DiagnosisDetails from "./pages/DiagnosisDetails";
 import Patients from "./pages/Patients";
+import PatientDetails from "./pages/PatientDetails";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import Security from "./pages/Security";
+
 
 function App() {
   return (
@@ -40,22 +45,17 @@ function App() {
               element={<DiagnosisDetails />}
             />
 
-            {/* Reports */}
-            <Route
-              path="/reports"
-              element={
-                <div className="p-8">
-                  <h1 className="text-2xl font-bold">Reports</h1>
+            <Route path="/patients/:patientId" element={<PatientDetails />} />
 
-                  <p className="mt-2 text-slate-500">
-                    Reports page coming soon.
-                  </p>
-                </div>
-              }
-            />
+            {/* Reports */}
+            <Route path="/reports" element={<Reports />} />
 
             {/* Patients */}
             <Route path="/patients" element={<Patients />} />
+
+            <Route path="/settings" element={<Settings />} />
+
+            <Route path="/security" element={<Security />} />
 
             {/* Registration */}
             <Route

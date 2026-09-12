@@ -27,8 +27,9 @@ import {
   X,
 } from "lucide-react";
 
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
+import api from "../services/api";
 // ============================================================
 // Navigation Items
 // ============================================================
@@ -73,7 +74,20 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
   const navigate = useNavigate();
 
   const location = useLocation();
+  const [currentUser, setCurrentUser] = useState(null);
 
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const response = await api.get("/users/me");
+        setCurrentUser(response.data);
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+      }
+    };
+
+    loadCurrentUser();
+  }, []);
   // ==========================================================
   // Navigate to Page
   // ==========================================================
@@ -105,7 +119,13 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
   // ==========================================================
 
   const isActive = (path) => {
-    return location.pathname === path;
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard";
+    }
+
+    return (
+      location.pathname === path || location.pathname.startsWith(`${path}/`)
+    );
   };
 
   return (
@@ -276,51 +296,66 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
             {/* Settings */}
 
             <button
+              onClick={() => handleNavigation("/settings")}
               title={collapsed ? "Settings" : undefined}
               className={`
-                flex
-                w-full
-                items-center
-                rounded-xl
-                py-3
-                text-sm
-                font-medium
-                text-slate-600
-                transition
-                hover:bg-slate-50
-                hover:text-slate-900
+    flex
+    w-full
+    items-center
+    rounded-xl
+    py-3
+    text-sm
+    font-medium
+    transition
 
-                ${collapsed ? "justify-center px-2" : "gap-3 px-4"}
-              `}
+    ${collapsed ? "justify-center px-2" : "gap-3 px-4"}
+
+    ${
+      isActive("/settings")
+        ? "bg-cyan-50 text-cyan-700"
+        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+    }
+  `}
             >
               <Settings size={19} className="shrink-0" />
 
               {!collapsed && <span>Settings</span>}
-            </button>
 
+              {!collapsed && isActive("/settings") && (
+                <span className="ml-auto h-2 w-2 rounded-full bg-cyan-600" />
+              )}
+            </button>
             {/* Security */}
 
             <button
+              onClick={() => handleNavigation("/security")}
               title={collapsed ? "Security" : undefined}
               className={`
-                flex
-                w-full
-                items-center
-                rounded-xl
-                py-3
-                text-sm
-                font-medium
-                text-slate-600
-                transition
-                hover:bg-slate-50
-                hover:text-slate-900
+    flex
+    w-full
+    items-center
+    rounded-xl
+    py-3
+    text-sm
+    font-medium
+    transition
 
-                ${collapsed ? "justify-center px-2" : "gap-3 px-4"}
-              `}
+    ${collapsed ? "justify-center px-2" : "gap-3 px-4"}
+
+    ${
+      isActive("/security")
+        ? "bg-cyan-50 text-cyan-700"
+        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+    }
+  `}
             >
               <ShieldCheck size={19} className="shrink-0" />
 
               {!collapsed && <span>Security</span>}
+
+              {!collapsed && isActive("/security") && (
+                <span className="ml-auto h-2 w-2 rounded-full bg-cyan-600" />
+              )}
             </button>
           </nav>
         </div>
@@ -344,7 +379,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
             {/* Avatar */}
 
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-100 font-semibold text-cyan-700">
-              U
+              {currentUser?.full_name?.charAt(0)?.toUpperCase() || "U"}
             </div>
 
             {/* User Information */}
@@ -352,7 +387,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-800">
-                  Medical User
+                  {currentUser?.full_name || "Medical User"}
                 </p>
 
                 <p className="truncate text-xs text-slate-500">

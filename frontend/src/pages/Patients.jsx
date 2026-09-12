@@ -30,9 +30,40 @@ function Patients() {
         setLoading(true);
         setError("");
 
+        // --------------------------------------------------------
+        // Fetch patients belonging to the logged-in physician.
+        //
+        // The backend may return the patient list directly or
+        // inside a wrapper such as:
+        //
+        // { patients: [...] }
+        // { data: [...] }
+        //
+        // Normalize the response before storing it in state so
+        // patients always remains an array.
+        // --------------------------------------------------------
+
         const response = await api.get("/users/patients");
 
-        setPatients(response.data?.patients || []);
+        const responseData = response.data;
+
+        let patientList = [];
+
+        if (Array.isArray(responseData)) {
+          // Backend returned the array directly.
+          patientList = responseData;
+        } else if (Array.isArray(responseData?.patients)) {
+          // Backend returned { patients: [...] }.
+          patientList = responseData.patients;
+        } else if (Array.isArray(responseData?.data)) {
+          // Backend returned { data: [...] }.
+          patientList = responseData.data;
+        }
+
+        // Always keep patients as an array.
+        // This prevents .filter(), .length, and .map()
+        // from failing if the API response format changes.
+        setPatients(patientList);
       } catch (err) {
         console.error("Patients fetch error:", err);
 

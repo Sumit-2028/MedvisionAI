@@ -2,11 +2,6 @@ import os
 import uuid
 import io
 import json
-from app.services.report_service import generate_medical_report
-from sqlalchemy import func
-# ============================================================
-# FastAPI Imports
-# ============================================================
 
 from fastapi import (
     APIRouter,
@@ -34,7 +29,12 @@ from app.database.models import (
 )
 
 from app.services.model_service import predict_image
+from app.services.report_service import generate_medical_report
 
+
+# ============================================================
+# ROUTER CONFIGURATION
+# ============================================================
 
 router = APIRouter(
     prefix="/diagnosis",
@@ -43,26 +43,61 @@ router = APIRouter(
 
 
 # ============================================================
-# CONFIGURATION
+# FILE UPLOAD CONFIGURATION
 # ============================================================
 
+# Directory where uploaded X-ray images will be stored.
 UPLOAD_DIR = "uploads"
 
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+# Maximum allowed X-ray file size.
+# 10 MB is sufficient for the prototype.
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
+
+# Allowed file extensions.
 ALLOWED_EXTENSIONS = {
     ".jpg",
     ".jpeg",
     ".png"
 }
 
+
+# Allowed MIME/content types.
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
     "image/png"
 }
 
 
+# ============================================================
+# HELPER FUNCTION
+# ============================================================
 
+def get_owned_patient(
+    patient_id: int,
+    current_user: User,
+    db: Session
+):
+    """
+    Retrieve a patient only if the patient belongs to
+    the currently logged-in physician.
+
+    This is an important security check.
+
+    A physician must not be able to access another
+    physician's patients simply by changing patient_id.
+    """
+
+    patient = (
+        db.query(Patient)
+        .filter(
+            Patient.patient_id == patient_id,
+            Patient.created_by == current_user.user_id
+        )
+        .first()
+    )
+
+    return patient
 
 
 # ============================================================
@@ -72,76 +107,103 @@ ALLOWED_CONTENT_TYPES = {
 @router.post("/upload")
 async def upload_xray(
     file: UploadFile = File(...),
-    age: int = Form(...),
-    gender: str = Form(...),
+
+    # --------------------------------------------------------
+    # NEW:
+    # The frontend now sends patient_id instead of age/gender.
+    # --------------------------------------------------------
+
+    patient_id: int = Form(...),
+
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
 
     # ========================================================
-    # Validate patient age
+    # 1. FIND AND VERIFY PATIENT
     # ========================================================
 
-    if age < 1 or age > 120:
+    """
+    We do NOT trust patient information from the frontend.
+
+    The frontend only sends patient_id.
+
+    The backend verifies:
+        patient exists
+        AND
+        patient belongs to current physician
+    """
+
+    patient = get_owned_patient(
+        patient_id=patient_id,
+        current_user=current_user,
+        db=db
+    )
+
+    if patient is None:
+
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Age must be between 1 and 120"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found or you do not have access to this patient."
         )
 
 
-        # ========================================================
-    # Validate patient gender
+    # ========================================================
+    # 2. VALIDATE PATIENT INFORMATION
     # ========================================================
 
-    gender = gender.strip()
+    # Age and gender are now taken from the Patient table.
+    # They are NOT supplied by the X-ray upload form.
 
-    allowed_genders = {
-        "Male",
-        "Female",
-        "Other",
-        "Prefer not to say"
-    }
+    if patient.age is None:
 
-    if gender not in allowed_genders:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Gender must be Male, Female, Other, or Prefer not to say"
+            detail="Patient age is missing. Please update the patient information."
         )
 
-    
+
+    if patient.gender is None:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Patient gender is missing. Please update the patient information."
+        )
+
+
     # ========================================================
-    # 1. Validate content type
+    # 3. VALIDATE FILE CONTENT TYPE
     # ========================================================
 
     if file.content_type not in ALLOWED_CONTENT_TYPES:
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only JPG, JPEG and PNG images are allowed"
+            detail="Only JPG, JPEG and PNG images are allowed."
         )
 
 
     # ========================================================
-    # 2. Read file
+    # 4. READ UPLOADED FILE
     # ========================================================
 
     file_data = await file.read()
 
 
     # ========================================================
-    # 3. Validate file size
+    # 5. VALIDATE FILE SIZE
     # ========================================================
 
     if len(file_data) > MAX_FILE_SIZE:
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File size must not exceed 10 MB"
+            detail="File size must not exceed 10 MB."
         )
 
 
     # ========================================================
-    # 4. Validate actual image
+    # 6. VALIDATE ACTUAL IMAGE
     # ========================================================
 
     try:
@@ -150,18 +212,19 @@ async def upload_xray(
             io.BytesIO(file_data)
         )
 
+        # Verify that the file is a valid image.
         image.verify()
 
     except Exception:
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or corrupted image file"
+            detail="Invalid or corrupted image file."
         )
 
 
     # ========================================================
-    # 5. Check file extension
+    # 7. VALIDATE FILE EXTENSION
     # ========================================================
 
     extension = os.path.splitext(
@@ -173,42 +236,12 @@ async def upload_xray(
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file extension"
+            detail="Invalid file extension."
         )
 
 
     # ========================================================
-    # 6. Find patient associated with logged-in user
-    # ========================================================
-
-    patient = (
-        db.query(Patient)
-        .filter(
-            Patient.user_id == current_user.user_id
-        )
-        .first()
-    )
-
-
-    if patient is None:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient profile not found. Please create your patient profile first."
-        )
-
-    # ========================================================
-    # Update patient information
-    # ========================================================
-
-    patient.age = age
-    patient.gender = gender
-
-    db.flush()
-
-
-    # ========================================================
-    # 7. Create upload directory
+    # 8. CREATE UPLOAD DIRECTORY
     # ========================================================
 
     os.makedirs(
@@ -218,8 +251,13 @@ async def upload_xray(
 
 
     # ========================================================
-    # 8. Generate unique filename
+    # 9. GENERATE UNIQUE FILE NAME
     # ========================================================
+
+    """
+    UUID prevents filename collisions and avoids trusting
+    the original filename supplied by the user.
+    """
 
     unique_filename = (
         f"{uuid.uuid4()}{extension}"
@@ -233,7 +271,7 @@ async def upload_xray(
 
 
     # ========================================================
-    # 9. Save X-ray
+    # 10. SAVE X-RAY IMAGE
     # ========================================================
 
     with open(
@@ -245,7 +283,7 @@ async def upload_xray(
 
 
     # ========================================================
-    # 10. Open image for AI analysis
+    # 11. OPEN IMAGE FOR AI ANALYSIS
     # ========================================================
 
     try:
@@ -256,14 +294,19 @@ async def upload_xray(
 
     except Exception:
 
+        # Remove invalid uploaded file.
+        if os.path.exists(file_path):
+
+            os.remove(file_path)
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unable to process uploaded image"
+            detail="Unable to process uploaded image."
         )
 
 
     # ========================================================
-    # 11. Run DenseNet121
+    # 12. RUN DENSENET121 AI MODEL
     # ========================================================
 
     try:
@@ -274,9 +317,12 @@ async def upload_xray(
 
     except Exception as e:
 
-        # Remove uploaded image if prediction fails
+        # ----------------------------------------------------
+        # If AI prediction fails, remove uploaded image.
+        # ----------------------------------------------------
 
         if os.path.exists(file_path):
+
             os.remove(file_path)
 
         raise HTTPException(
@@ -286,7 +332,7 @@ async def upload_xray(
 
 
     # ========================================================
-    # 12. Extract analysis
+    # 13. EXTRACT AI ANALYSIS
     # ========================================================
 
     result = prediction_result["result"]
@@ -299,16 +345,25 @@ async def upload_xray(
 
 
     # ========================================================
-    # 13. Determine predicted disease
+    # 14. DETERMINE PRIMARY PREDICTED DISEASE
     # ========================================================
 
     if result["status"] == "NORMAL":
 
         predicted_disease = "No abnormality detected"
 
+        # ----------------------------------------------------
+        # For NORMAL result, confidence is represented as 1.0
+        # for compatibility with the existing database model.
+        # ----------------------------------------------------
+
         confidence_score = 1.0
 
     else:
+
+        # ----------------------------------------------------
+        # The first finding is the highest-probability finding.
+        # ----------------------------------------------------
 
         predicted_disease = findings[0]["disease"]
 
@@ -318,8 +373,13 @@ async def upload_xray(
 
 
     # ========================================================
-    # 14. Create Diagnosis database record
+    # 15. CREATE DIAGNOSIS DATABASE RECORD
     # ========================================================
+
+    """
+    The diagnosis is directly associated with the selected
+    patient through patient_id.
+    """
 
     diagnosis = Diagnosis(
 
@@ -351,152 +411,282 @@ async def upload_xray(
 
 
     # ========================================================
-    # 15. Create Medical Report
+    # 16. CREATE MEDICAL REPORT DATABASE RECORD
     # ========================================================
 
     medical_report = MedicalReport(
+
         diagnosis_id=diagnosis.diagnosis_id,
+
+        # Temporary value.
+        # It will be replaced after PDF generation.
         report_path="pending"
     )
 
+
     db.add(medical_report)
+
     db.flush()
 
+
     # ========================================================
-    # Generate PDF report
+    # 17. GENERATE MEDICAL REPORT PDF
     # ========================================================
 
     try:
 
         generated_report_path = generate_medical_report(
+
             report_id=medical_report.report_id,
+
             diagnosis=diagnosis,
+
             patient=patient,
+
             user=current_user
         )
 
     except Exception as e:
 
+        # ----------------------------------------------------
+        # Roll back database changes.
+        # ----------------------------------------------------
+
         db.rollback()
 
+
+        # ----------------------------------------------------
+        # Remove uploaded X-ray if report generation fails.
+        # ----------------------------------------------------
+
         if os.path.exists(file_path):
+
             os.remove(file_path)
+
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Medical report generation failed: {str(e)}"
         )
 
+
     # ========================================================
-    # Update report path
+    # 18. SAVE GENERATED REPORT PATH
     # ========================================================
 
-    medical_report.report_path = generated_report_path
+    medical_report.report_path = (
+        generated_report_path
+    )
+
+
+    # ========================================================
+    # 19. COMMIT DATABASE TRANSACTION
+    # ========================================================
 
     db.commit()
 
+
+    # Refresh objects so generated IDs and database values
+    # are available in the response.
+
     db.refresh(diagnosis)
+
     db.refresh(medical_report)
 
 
     # ========================================================
-    # 16. Return response
+    # 20. RETURN ANALYSIS RESPONSE
     # ========================================================
 
     return {
-        "message": "X-ray uploaded and analyzed successfully",
 
-        "patient_id": patient.patient_id,
-        "diagnosis_id": diagnosis.diagnosis_id,
-        "report_id": medical_report.report_id,
+        "message":
+            "X-ray uploaded and analyzed successfully",
 
-        "age": patient.age,
-        "gender": patient.gender,
+        # ----------------------------------------------------
+        # Patient information
+        # ----------------------------------------------------
 
-        "filename": unique_filename,
+        "patient_id":
+            patient.patient_id,
 
-        "result": result,
+        "patient_name":
+            patient.full_name,
 
-        "predicted_disease": predicted_disease,
+        "age":
+            patient.age,
 
-        "confidence_score": round(
-            confidence_score * 100,
-            2
-        ),
+        "gender":
+            patient.gender,
 
-        "findings": findings,
+        # ----------------------------------------------------
+        # Diagnosis information
+        # ----------------------------------------------------
 
-        "top_predictions": top_predictions,
+        "diagnosis_id":
+            diagnosis.diagnosis_id,
 
-        "all_predictions": all_predictions,
+        "report_id":
+            medical_report.report_id,
 
-        "uploaded_by": current_user.user_id
+        "filename":
+            unique_filename,
+
+        # ----------------------------------------------------
+        # AI result
+        # ----------------------------------------------------
+
+        "result":
+            result,
+
+        "predicted_disease":
+            predicted_disease,
+
+        "confidence_score":
+            round(
+                confidence_score * 100,
+                2
+            ),
+
+        "findings":
+            findings,
+
+        "top_predictions":
+            top_predictions,
+
+        "all_predictions":
+            all_predictions,
+
+        # ----------------------------------------------------
+        # Audit information
+        # ----------------------------------------------------
+
+        "uploaded_by":
+            current_user.user_id
     }
 
+
+# ============================================================
+# DASHBOARD STATISTICS
+# ============================================================
 
 @router.get("/dashboard-stats")
 def get_dashboard_stats(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Find the logged-in user's patient profile
-    patient = (
+
+    """
+    Returns statistics for the logged-in physician.
+
+    IMPORTANT:
+    The old implementation treated the logged-in user
+    as a patient.
+
+    The new implementation treats the logged-in user
+    as a physician and aggregates statistics across
+    that physician's patients.
+    """
+
+    # ========================================================
+    # GET PHYSICIAN'S PATIENTS
+    # ========================================================
+
+    patients = (
         db.query(Patient)
-        .filter(Patient.user_id == current_user.user_id)
-        .first()
+        .filter(
+            Patient.created_by == current_user.user_id
+        )
+        .all()
     )
 
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient profile not found"
-        )
 
-    # Total analyses performed by this patient
+    # If physician has no patients yet,
+    # return zero statistics.
+
+    if not patients:
+
+        return {
+            "total_patients": 0,
+            "total_analyses": 0,
+            "abnormal_results": 0,
+            "normal_results": 0
+        }
+
+
+    # ========================================================
+    # GET PATIENT IDS
+    # ========================================================
+
+    patient_ids = [
+        patient.patient_id
+        for patient in patients
+    ]
+
+
+    # ========================================================
+    # TOTAL ANALYSES
+    # ========================================================
+
     total_analyses = (
         db.query(Diagnosis)
         .filter(
-            Diagnosis.patient_id == patient.patient_id
+            Diagnosis.patient_id.in_(patient_ids)
         )
         .count()
     )
 
-    # Abnormal analyses
+
+    # ========================================================
+    # ABNORMAL ANALYSES
+    # ========================================================
+
     abnormal_results = (
         db.query(Diagnosis)
         .filter(
-            Diagnosis.patient_id == patient.patient_id,
+            Diagnosis.patient_id.in_(patient_ids),
             Diagnosis.result_status == "ABNORMAL"
         )
         .count()
     )
 
-    # Normal analyses
+
+    # ========================================================
+    # NORMAL ANALYSES
+    # ========================================================
+
     normal_results = (
         db.query(Diagnosis)
         .filter(
-            Diagnosis.patient_id == patient.patient_id,
+            Diagnosis.patient_id.in_(patient_ids),
             Diagnosis.result_status == "NORMAL"
         )
         .count()
     )
 
+
+    # ========================================================
+    # RETURN DASHBOARD STATISTICS
+    # ========================================================
+
     return {
-        "total_analyses": total_analyses,
-        "abnormal_results": abnormal_results,
-        "normal_results": normal_results
+
+        "total_patients":
+            len(patient_ids),
+
+        "total_analyses":
+            total_analyses,
+
+        "abnormal_results":
+            abnormal_results,
+
+        "normal_results":
+            normal_results
     }
+
 
 # ============================================================
 # DOWNLOAD MEDICAL REPORT
-# ============================================================
-# Returns the generated PDF medical report.
-#
-# Endpoint:
-# GET /diagnosis/report/{report_id}
-#
-# Security:
-# The report must belong to the currently logged-in user.
 # ============================================================
 
 @router.get("/report/{report_id}")
@@ -506,32 +696,14 @@ def download_medical_report(
     db: Session = Depends(get_db)
 ):
 
-    # --------------------------------------------------------
-    # Find the patient's profile for the logged-in user
-    # --------------------------------------------------------
+    """
+    Downloads a medical report only if the report belongs
+    to a patient created by the logged-in physician.
+    """
 
-    patient = (
-        db.query(Patient)
-        .filter(
-            Patient.user_id == current_user.user_id
-        )
-        .first()
-    )
-
-    if patient is None:
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient profile not found"
-        )
-
-
-    # --------------------------------------------------------
-    # Find the requested medical report
-    # --------------------------------------------------------
-    # Join through Diagnosis so we can verify that this
-    # report belongs to the logged-in patient's diagnosis.
-    # --------------------------------------------------------
+    # ========================================================
+    # FIND REPORT + ASSOCIATED PATIENT
+    # ========================================================
 
     medical_report = (
         db.query(MedicalReport)
@@ -540,17 +712,22 @@ def download_medical_report(
             MedicalReport.diagnosis_id ==
             Diagnosis.diagnosis_id
         )
+        .join(
+            Patient,
+            Diagnosis.patient_id ==
+            Patient.patient_id
+        )
         .filter(
             MedicalReport.report_id == report_id,
-            Diagnosis.patient_id == patient.patient_id
+            Patient.created_by == current_user.user_id
         )
         .first()
     )
 
 
-    # --------------------------------------------------------
-    # Report does not exist or does not belong to user
-    # --------------------------------------------------------
+    # ========================================================
+    # REPORT NOT FOUND / UNAUTHORIZED
+    # ========================================================
 
     if medical_report is None:
 
@@ -560,9 +737,9 @@ def download_medical_report(
         )
 
 
-    # --------------------------------------------------------
-    # Check that the PDF path exists in the database
-    # --------------------------------------------------------
+    # ========================================================
+    # CHECK REPORT PATH
+    # ========================================================
 
     if not medical_report.report_path:
 
@@ -572,11 +749,13 @@ def download_medical_report(
         )
 
 
-    # --------------------------------------------------------
-    # Check that the actual PDF file exists
-    # --------------------------------------------------------
+    # ========================================================
+    # CHECK ACTUAL PDF FILE
+    # ========================================================
 
-    if not os.path.exists(medical_report.report_path):
+    if not os.path.exists(
+        medical_report.report_path
+    ):
 
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -584,24 +763,24 @@ def download_medical_report(
         )
 
 
-    # --------------------------------------------------------
-    # Return the PDF file
-    # --------------------------------------------------------
+    # ========================================================
+    # RETURN PDF
+    # ========================================================
 
     return FileResponse(
+
         path=medical_report.report_path,
+
         media_type="application/pdf",
-        filename=f"MedVisionAI_Report_{report_id}.pdf"
+
+        filename=(
+            f"MedVisionAI_Report_{report_id}.pdf"
+        )
     )
+
 
 # ============================================================
 # GET DIAGNOSIS HISTORY
-# ============================================================
-# Returns all previous X-ray analyses for the logged-in
-# patient's account.
-#
-# Each history record also includes report_id so the frontend
-# can download the corresponding generated PDF report.
 # ============================================================
 
 @router.get("/history")
@@ -610,34 +789,66 @@ def get_diagnosis_history(
     db: Session = Depends(get_db)
 ):
 
-    # --------------------------------------------------------
-    # Find patient belonging to logged-in user
-    # --------------------------------------------------------
+    """
+    Returns all X-ray analyses belonging to patients
+    created by the logged-in physician.
 
-    patient = (
+    Each history item contains patient information so the
+    frontend can display the patient's name.
+    """
+
+    # ========================================================
+    # GET PHYSICIAN'S PATIENTS
+    # ========================================================
+
+    patients = (
         db.query(Patient)
         .filter(
-            Patient.user_id == current_user.user_id
+            Patient.created_by == current_user.user_id
         )
-        .first()
+        .all()
     )
 
-    if patient is None:
 
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient profile not found"
-        )
+    # ========================================================
+    # NO PATIENTS
+    # ========================================================
+
+    if not patients:
+
+        return {
+            "total_reports": 0,
+            "history": []
+        }
 
 
-    # --------------------------------------------------------
-    # Get all diagnoses for this patient
-    # --------------------------------------------------------
+    # ========================================================
+    # GET PATIENT IDS
+    # ========================================================
+
+    patient_ids = [
+        patient.patient_id
+        for patient in patients
+    ]
+
+
+    # Create a dictionary so we can quickly get
+    # patient details for each diagnosis.
+
+    patient_map = {
+        patient.patient_id: patient
+        for patient in patients
+    }
+
+
+    # ========================================================
+    # GET ALL DIAGNOSES
+    # ========================================================
 
     diagnoses = (
         db.query(Diagnosis)
         .filter(
-            Diagnosis.patient_id == patient.patient_id
+            Diagnosis.patient_id.in_(patient_ids)
         )
         .order_by(
             Diagnosis.diagnosis_timestamp.desc()
@@ -646,9 +857,9 @@ def get_diagnosis_history(
     )
 
 
-    # --------------------------------------------------------
-    # Prepare history response
-    # --------------------------------------------------------
+    # ========================================================
+    # PREPARE HISTORY RESPONSE
+    # ========================================================
 
     history = []
 
@@ -656,17 +867,36 @@ def get_diagnosis_history(
     for diagnosis in diagnoses:
 
         # ----------------------------------------------------
-        # Parse stored findings JSON
+        # Get patient
         # ----------------------------------------------------
 
-        findings = json.loads(
-            diagnosis.findings_json
+        patient = patient_map.get(
+            diagnosis.patient_id
         )
 
 
+        if patient is None:
+
+            continue
+
+
         # ----------------------------------------------------
-        # Find the medical report associated with this
-        # diagnosis.
+        # Parse stored findings JSON
+        # ----------------------------------------------------
+
+        try:
+
+            findings = json.loads(
+                diagnosis.findings_json
+            )
+
+        except Exception:
+
+            findings = []
+
+
+        # ----------------------------------------------------
+        # Find associated medical report
         # ----------------------------------------------------
 
         medical_report = (
@@ -680,7 +910,7 @@ def get_diagnosis_history(
 
 
         # ----------------------------------------------------
-        # Add diagnosis + report information
+        # Add history record
         # ----------------------------------------------------
 
         history.append({
@@ -692,6 +922,26 @@ def get_diagnosis_history(
                 medical_report.report_id
                 if medical_report
                 else None,
+
+            # ------------------------------------------------
+            # Patient information
+            # ------------------------------------------------
+
+            "patient_id":
+                patient.patient_id,
+
+            "patient_name":
+                patient.full_name,
+
+            "patient_age":
+                patient.age,
+
+            "patient_gender":
+                patient.gender,
+
+            # ------------------------------------------------
+            # Diagnosis information
+            # ------------------------------------------------
 
             "predicted_disease":
                 diagnosis.predicted_disease,
@@ -713,26 +963,22 @@ def get_diagnosis_history(
 
             "timestamp":
                 diagnosis.diagnosis_timestamp
-
         })
 
 
-    # --------------------------------------------------------
-    # Return history
-    # --------------------------------------------------------
+    # ========================================================
+    # RETURN HISTORY
+    # ========================================================
 
     return {
-
-        "patient_id":
-            patient.patient_id,
 
         "total_reports":
             len(history),
 
         "history":
             history
-
     }
+
 
 # ============================================================
 # GET SINGLE DIAGNOSIS
@@ -745,49 +991,47 @@ def get_diagnosis(
     db: Session = Depends(get_db)
 ):
 
-    # --------------------------------------------------------
-    # Find patient belonging to logged-in user
-    # --------------------------------------------------------
+    """
+    Returns a single diagnosis.
 
-    patient = (
-        db.query(Patient)
-        .filter(
-            Patient.user_id == current_user.user_id
-        )
-        .first()
-    )
+    Access is granted only if the diagnosis belongs
+    to a patient created by the logged-in physician.
+    """
 
-    if patient is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Patient profile not found"
-        )
-
-
-    # --------------------------------------------------------
-    # Find diagnosis belonging to this patient
-    # --------------------------------------------------------
+    # ========================================================
+    # FIND DIAGNOSIS
+    # ========================================================
 
     diagnosis = (
         db.query(Diagnosis)
+        .join(
+            Patient,
+            Diagnosis.patient_id ==
+            Patient.patient_id
+        )
         .filter(
             Diagnosis.diagnosis_id == diagnosis_id,
-            Diagnosis.patient_id == patient.patient_id
+            Patient.created_by == current_user.user_id
         )
         .first()
     )
 
 
+    # ========================================================
+    # DIAGNOSIS NOT FOUND / UNAUTHORIZED
+    # ========================================================
+
     if diagnosis is None:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Diagnosis not found"
         )
 
 
-    # --------------------------------------------------------
-    # Get medical report
-    # --------------------------------------------------------
+    # ========================================================
+    # GET ASSOCIATED MEDICAL REPORT
+    # ========================================================
 
     medical_report = (
         db.query(MedicalReport)
@@ -799,24 +1043,55 @@ def get_diagnosis(
     )
 
 
-    # --------------------------------------------------------
-    # Parse JSON fields
-    # --------------------------------------------------------
+    # ========================================================
+    # GET PATIENT
+    # ========================================================
 
-    findings = json.loads(
-        diagnosis.findings_json
+    patient = (
+        db.query(Patient)
+        .filter(
+            Patient.patient_id ==
+            diagnosis.patient_id
+        )
+        .first()
     )
 
-    all_predictions = json.loads(
-        diagnosis.all_predictions_json
-    )
+
+    # ========================================================
+    # PARSE JSON FIELDS
+    # ========================================================
+
+    try:
+
+        findings = json.loads(
+            diagnosis.findings_json
+        )
+
+    except Exception:
+
+        findings = []
 
 
-    # --------------------------------------------------------
-    # Return complete diagnosis
-    # --------------------------------------------------------
+    try:
+
+        all_predictions = json.loads(
+            diagnosis.all_predictions_json
+        )
+
+    except Exception:
+
+        all_predictions = []
+
+
+    # ========================================================
+    # RETURN COMPLETE DIAGNOSIS
+    # ========================================================
 
     return {
+
+        # ----------------------------------------------------
+        # Diagnosis
+        # ----------------------------------------------------
 
         "diagnosis_id":
             diagnosis.diagnosis_id,
@@ -826,11 +1101,38 @@ def get_diagnosis(
             if medical_report
             else None,
 
+        # ----------------------------------------------------
+        # Patient
+        # ----------------------------------------------------
+
         "patient_id":
             diagnosis.patient_id,
 
+        "patient_name":
+            patient.full_name
+            if patient
+            else None,
+
+        "patient_age":
+            patient.age
+            if patient
+            else None,
+
+        "patient_gender":
+            patient.gender
+            if patient
+            else None,
+
+        # ----------------------------------------------------
+        # X-ray
+        # ----------------------------------------------------
+
         "image_path":
             diagnosis.image_path,
+
+        # ----------------------------------------------------
+        # AI result
+        # ----------------------------------------------------
 
         "result_status":
             diagnosis.result_status,
@@ -856,9 +1158,13 @@ def get_diagnosis(
         "diagnosis_timestamp":
             diagnosis.diagnosis_timestamp,
 
+        # ----------------------------------------------------
+        # Medical safety disclaimer
+        # ----------------------------------------------------
+
         "ai_disclaimer":
             "This AI-generated assessment is for "
-            "research and decision-support purposes "
-            "and is not a definitive medical diagnosis."
+            "research and clinical decision-support "
+            "purposes only and is not a definitive "
+            "medical diagnosis."
     }
-
