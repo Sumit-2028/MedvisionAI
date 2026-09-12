@@ -1,4 +1,6 @@
 import json
+import logging
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
@@ -6,10 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_admin
 from app.database.connection import get_db
-from app.database.models import Diagnosis, MedicalReport, Patient, User
+from app.database.models import Administrator, Diagnosis, MedicalReport, Patient, User
 
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+logger = logging.getLogger(__name__)
+BASE_DIR = Path(__file__).resolve().parents[2]
+UPLOADS_DIR = (BASE_DIR / "uploads").resolve()
+REPORTS_DIR = (BASE_DIR / "reports").resolve()
 
 
 def _user_summary(user: User) -> dict:
@@ -27,6 +33,61 @@ def _parse_json(value: str, fallback):
         return json.loads(value)
     except (TypeError, ValueError, json.JSONDecodeError):
         return fallback
+
+
+def _safe_file_path(value: str | None, root: Path) -> Path | None:
+    """Return a path only when it is inside the expected storage directory."""
+    if not value:
+        return None
+
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        candidate = BASE_DIR / candidate
+
+    candidate = candidate.resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate
+
+
+def _remove_stored_files(paths: list[tuple[str | None, Path]]) -> None:
+    for value, root in paths:
+        path = _safe_file_path(value, root)
+        if path is None or not path.is_file():
+            continue
+        try:
+            path.unlink()
+        except OSError:
+            # Database deletion has already succeeded. Keep the API reliable
+            # and leave an operator-visible log for cleanup of an orphan file.
+            logger.warning("Could not remove stored file during admin deletion: %s", path)
+
+
+def _stage_patient_deletion(db: Session, patient: Patient) -> tuple[int, int, list[tuple[str | None, Path]]]:
+    """Stage explicit child deletes and return counts plus safe file paths."""
+    diagnoses = db.query(Diagnosis).filter(Diagnosis.patient_id == patient.patient_id).all()
+    diagnosis_ids = [diagnosis.diagnosis_id for diagnosis in diagnoses]
+    reports = []
+    if diagnosis_ids:
+        reports = db.query(MedicalReport).filter(MedicalReport.diagnosis_id.in_(diagnosis_ids)).all()
+
+    files: list[tuple[str | None, Path]] = []
+    for diagnosis in diagnoses:
+        files.append((diagnosis.image_path, UPLOADS_DIR))
+        files.append((diagnosis.heatmap_path, UPLOADS_DIR))
+    for report in reports:
+        files.append((report.report_path, REPORTS_DIR))
+
+    # Delete children explicitly rather than relying on database-level
+    # cascades, which are not present in the existing migrations.
+    for report in reports:
+        db.delete(report)
+    for diagnosis in diagnoses:
+        db.delete(diagnosis)
+    db.delete(patient)
+    return len(diagnoses), len(reports), files
 
 
 @router.get("/me")
@@ -102,6 +163,63 @@ def list_users(
     return {"total": total, "skip": skip, "limit": limit, "users": [_user_summary(user) for user in users]}
 
 
+@router.delete("/users/{user_id}")
+def delete_physician(
+    user_id: int,
+    current_admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    if user_id == current_admin.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own administrator account",
+        )
+
+    physician = db.query(User).filter(User.user_id == user_id).first()
+    if physician is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if physician.role != "PHYSICIAN":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only physician accounts can be deleted from this endpoint",
+        )
+
+    patients = db.query(Patient).filter(Patient.created_by == physician.user_id).all()
+    deleted_diagnoses = 0
+    deleted_reports = 0
+    stored_files: list[tuple[str | None, Path]] = []
+    deleted_user_id = physician.user_id
+
+    try:
+        for patient in patients:
+            diagnoses, reports, files = _stage_patient_deletion(db, patient)
+            deleted_diagnoses += diagnoses
+            deleted_reports += reports
+            stored_files.extend(files)
+
+        administrator = db.query(Administrator).filter(Administrator.user_id == physician.user_id).first()
+        if administrator is not None:
+            db.delete(administrator)
+        db.delete(physician)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to delete physician %s", user_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Physician could not be deleted",
+        )
+
+    _remove_stored_files(stored_files)
+    return {
+        "message": "Physician and associated records deleted successfully",
+        "deleted_user_id": deleted_user_id,
+        "deleted_patients": len(patients),
+        "deleted_diagnoses": deleted_diagnoses,
+        "deleted_reports": deleted_reports,
+    }
+
+
 @router.get("/patients")
 def list_patients(
     search: str | None = Query(default=None, max_length=100),
@@ -174,6 +292,36 @@ def get_patient(
             }
             for diagnosis in diagnoses
         ],
+    }
+
+
+@router.delete("/patients/{patient_id}")
+def delete_patient(
+    patient_id: int,
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    patient = db.query(Patient).filter(Patient.patient_id == patient_id).first()
+    if patient is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+
+    try:
+        deleted_diagnoses, deleted_reports, stored_files = _stage_patient_deletion(db, patient)
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to delete patient %s", patient_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Patient could not be deleted",
+        )
+
+    _remove_stored_files(stored_files)
+    return {
+        "message": "Patient and associated records deleted successfully",
+        "deleted_patient_id": patient_id,
+        "deleted_diagnoses": deleted_diagnoses,
+        "deleted_reports": deleted_reports,
     }
 
 

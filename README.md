@@ -56,6 +56,7 @@ Admin workflow: login → system overview → search users → inspect all patie
 - `GET /diagnosis/{diagnosis_id}`, `GET /diagnosis/report/{report_id}`
 - `GET /admin/dashboard`, `/admin/users`, `/admin/patients`, `/admin/diagnoses`
 - `GET /admin/patients/{patient_id}`, `GET /admin/diagnoses/{diagnosis_id}`
+- `DELETE /admin/users/{user_id}`, `DELETE /admin/patients/{patient_id}` (administrator only)
 - `GET /health`
 
 Admin list endpoints accept `search`, optional filters, and `skip`/`limit` pagination parameters. They return 403 to authenticated non-admin users.
