@@ -75,11 +75,31 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=choose-a-secret-password
 ```
 
-For a deployed frontend, set `frontend/.env`:
+For a deployed frontend, set `VITE_API_BASE_URL` in `frontend/.env` locally or in the Vercel project settings:
 
 ```env
-VITE_API_URL=https://your-api.example.com
+VITE_API_BASE_URL=https://your-api.example.com
 ```
+
+For Vercel, select `frontend` as the Root Directory. The build command is
+`npm run build`, the output directory is `dist`, and `frontend/vercel.json`
+provides the SPA fallback needed when refreshing client-side routes.
+
+Backend deployment settings can be supplied through `backend/.env` or the
+hosting platform's environment configuration:
+
+```env
+FRONTEND_URL=https://your-vercel-project.vercel.app
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+UPLOAD_DIR=
+REPORTS_DIR=
+```
+
+`FRONTEND_URL` is added to the allowed CORS origins. In production, set
+`CORS_ORIGINS` to the exact allowed origins; never use `*` with credentials.
+The default upload/report directories are local-only. Use persistent mounted
+storage or an object-storage service for production, because ephemeral
+application filesystems do not preserve X-rays and PDFs across restarts.
 
 ## Run locally
 
@@ -103,6 +123,10 @@ npm run dev
 ```
 
 The frontend normally runs at `http://localhost:5173`; FastAPI runs at `http://127.0.0.1:8000`. Keep the model at `backend/models/MedVisionAI_DenseNet121_best.pth`.
+Run `alembic upgrade head` against the production PostgreSQL database before
+starting the API; the application does not initialize tables automatically.
+The DenseNet121 model remains a backend deployment artifact and is never sent
+to or executed by Vercel.
 
 Migration commands:
 

@@ -20,6 +20,7 @@ from PIL import Image
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.dependencies import get_current_user
 from app.database.connection import get_db
 from app.database.models import (
@@ -31,9 +32,6 @@ from app.database.models import (
 
 from app.services.model_service import predict_image
 from app.services.report_service import generate_medical_report
-
-
-BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 # ============================================================
@@ -51,7 +49,7 @@ router = APIRouter(
 # ============================================================
 
 # Directory where uploaded X-ray images will be stored.
-UPLOAD_DIR = str(BASE_DIR / "uploads")
+UPLOAD_DIR = str(settings.upload_path)
 
 # Maximum allowed X-ray file size.
 # 10 MB is sufficient for the prototype.
@@ -760,7 +758,7 @@ def download_medical_report(
     # ========================================================
 
     report_path = Path(medical_report.report_path).resolve()
-    reports_root = (BASE_DIR / "reports").resolve()
+    reports_root = settings.reports_path
 
     try:
         report_path.relative_to(reports_root)

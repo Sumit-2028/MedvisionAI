@@ -18,23 +18,14 @@ from reportlab.platypus import (
 )
 from reportlab.pdfbase.pdfmetrics import stringWidth
 
+from app.core.config import settings
+
 
 # ============================================================
 # REPORT DIRECTORY
 # ============================================================
 
-BASE_DIR = os.path.dirname(
-    os.path.dirname(
-        os.path.dirname(
-            os.path.abspath(__file__)
-        )
-    )
-)
-
-REPORTS_DIR = os.path.join(
-    BASE_DIR,
-    "reports"
-)
+REPORTS_DIR = str(settings.reports_path)
 
 os.makedirs(
     REPORTS_DIR,

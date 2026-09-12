@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.dependencies import get_current_admin
 from app.database.connection import get_db
 from app.database.models import Administrator, Diagnosis, MedicalReport, Patient, User
@@ -14,8 +15,8 @@ from app.database.models import Administrator, Diagnosis, MedicalReport, Patient
 router = APIRouter(prefix="/admin", tags=["Admin"])
 logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parents[2]
-UPLOADS_DIR = (BASE_DIR / "uploads").resolve()
-REPORTS_DIR = (BASE_DIR / "reports").resolve()
+UPLOADS_DIR = settings.upload_path
+REPORTS_DIR = settings.reports_path
 
 
 def _user_summary(user: User) -> dict:

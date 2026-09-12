@@ -1,4 +1,10 @@
 venv/
 .env
+.env.*
+!.env.example
+uploads/*
+!uploads/.gitkeep
+reports/*
+!reports/.gitkeep
 __pycache__/
 *.pyc

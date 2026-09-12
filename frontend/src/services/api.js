@@ -6,8 +6,7 @@
 // This file creates a centralized Axios instance for communicating
 // with the FastAPI backend.
 //
-// Backend:
-// http://127.0.0.1:8000
+// Backend URL is supplied through VITE_API_BASE_URL.
 //
 // All authenticated requests automatically receive the JWT token
 // stored in localStorage.
@@ -21,8 +20,8 @@ import axios from "axios";
 // ============================================================
 
 const api = axios.create({
-  // FastAPI backend URL
-  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000",
+  // Set this in frontend/.env for local development and in Vercel for production.
+  baseURL: import.meta.env.VITE_API_BASE_URL || undefined,
 
   // Default response format
   headers: {
