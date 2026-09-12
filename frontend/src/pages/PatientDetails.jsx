@@ -132,7 +132,7 @@ export default function PatientDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="page-enter min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
 
@@ -150,7 +150,7 @@ export default function PatientDetails() {
 
   if (error || !patient) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="page-enter min-h-screen bg-slate-50">
         <div className="max-w-5xl mx-auto px-6 py-8">
           <button
             onClick={() => navigate("/patients")}
@@ -286,7 +286,7 @@ export default function PatientDetails() {
   // ==========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="page-enter min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* ==================================================
             HEADER

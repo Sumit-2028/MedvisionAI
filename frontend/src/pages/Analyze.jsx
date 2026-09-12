@@ -868,7 +868,7 @@ export default function Analyze() {
     const isAbnormal = result.result?.status === "ABNORMAL";
 
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="page-enter min-h-screen bg-slate-50">
         {/* ==================================================
             Header
         ================================================== */}
@@ -1423,7 +1423,7 @@ export default function Analyze() {
   // ==========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="page-enter min-h-screen bg-slate-50">
       {/* ======================================================
           Header
       ====================================================== */}

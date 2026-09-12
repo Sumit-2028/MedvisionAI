@@ -1,42 +1,294 @@
-import { ArrowRight, BrainCircuit, CheckCircle2, FileText, HeartPulse, LockKeyhole, ScanLine, Users, Workflow } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  BrainCircuit,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardCheck,
+  Cpu,
+  FileText,
+  HeartPulse,
+  LockKeyhole,
+  Menu,
+  Play,
+  ScanLine,
+  ShieldCheck,
+  Stethoscope,
+  UploadCloud,
+  UserRound,
+  Users,
+  Workflow,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "./landing.css";
 
-const features = [
-  [ScanLine, "AI-assisted X-ray analysis", "Review structured chest X-ray findings from the DenseNet121 model."],
-  [BrainCircuit, "14-condition classification", "See probability values and top predictions in one focused result view."],
-  [Users, "Patient management", "Keep patient profiles and longitudinal analysis history organized."],
-  [FileText, "Automated reports", "Generate consistent PDF reports for physician review and documentation."],
-  [Workflow, "Human-in-the-loop", "Physicians remain responsible for interpretation and clinical decisions."],
-  [LockKeyhole, "Secure access", "JWT authentication and ownership checks protect physician workspaces."],
+const navItems = [
+  ["Home", "home"],
+  ["Features", "features"],
+  ["How It Works", "how-it-works"],
+  ["Technology", "technology"],
+  ["About", "about"],
 ];
+
+const featureCards = [
+  [ScanLine, "AI-Powered X-Ray Analysis", "Review 14 chest X-ray conditions with DenseNet121-assisted findings and probability context."],
+  [Users, "Patient Management", "Keep patient profiles and their complete diagnosis history organized in one physician-focused workspace."],
+  [FileText, "Automated Medical Reports", "Generate consistent medical reports with structured findings ready for physician review."],
+  [ShieldCheck, "Secure & Reliable", "Use authenticated, physician-owned workflows designed for responsible medical data management."],
+];
+
+const workflowSteps = [
+  [LockKeyhole, "Login", "Secure access for physicians"],
+  [UserRound, "Select Patient", "Choose or create a patient"],
+  [UploadCloud, "Upload X-Ray", "Add a chest X-ray image"],
+  [BrainCircuit, "AI Analysis", "Review assisted findings"],
+  [ClipboardCheck, "Review & Report", "Validate and generate a report"],
+];
+
+const technologyHighlights = [
+  [Cpu, "Deep Learning", "DenseNet121"],
+  [Activity, "14 Conditions", "Comprehensive detection"],
+  [Workflow, "Research Driven", "Built for real-world impact"],
+];
+
+function scrollToSection(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 24);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    const sections = navItems
+      .map(([, id]) => document.getElementById(id))
+      .filter(Boolean);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-25% 0px -55%", threshold: [0.05, 0.2, 0.5] },
+    );
+    sections.forEach((section) => observer.observe(section));
+
+    const revealObserver = new IntersectionObserver(
+      (entries, revealInstance) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            revealInstance.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: "0px 0px -8%", threshold: 0.08 },
+    );
+    document.querySelectorAll(".mv-landing .mv-reveal").forEach((element) => revealObserver.observe(element));
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      observer.disconnect();
+      revealObserver.disconnect();
+    };
+  }, []);
+
+  const goTo = (id) => {
+    setMenuOpen(false);
+    scrollToSection(id);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="absolute inset-x-0 top-0 z-10 border-b border-white/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
-          <div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400 text-slate-950"><HeartPulse size={22} /></div><div><p className="font-bold tracking-tight">MedVision AI</p><p className="text-xs text-cyan-200">Clinical imaging intelligence</p></div></div>
-          <button onClick={() => navigate("/login")} className="rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold transition hover:bg-white/10">Physician login</button>
+    <div className="mv-landing">
+      <header className={`mv-nav ${scrolled ? "mv-nav--scrolled" : ""}`}>
+        <div className="mv-container mv-nav__inner">
+          <button className="mv-brand" type="button" onClick={() => goTo("home")} aria-label="MedVision AI home">
+            <span className="mv-brand__mark"><HeartPulse size={22} strokeWidth={2.3} /></span>
+            <span><strong>MedVision AI</strong><small>AI for a Healthier Tomorrow</small></span>
+          </button>
+
+          <nav className={`mv-nav__links ${menuOpen ? "mv-nav__links--open" : ""}`} aria-label="Landing page navigation">
+            {navItems.map(([label, id]) => (
+              <button key={id} type="button" className={activeSection === id ? "is-active" : ""} onClick={() => goTo(id)}>
+                {label}
+              </button>
+            ))}
+            <div className="mv-nav__mobile-actions">
+              <button type="button" className="mv-button mv-button--outline" onClick={() => navigate("/login")}>Login</button>
+              <button type="button" className="mv-button mv-button--primary" onClick={() => navigate("/login")}>Get Started <ArrowRight size={15} /></button>
+            </div>
+          </nav>
+
+          <div className="mv-nav__actions">
+            <button type="button" className="mv-button mv-button--outline mv-nav__login" onClick={() => navigate("/login")}>Login</button>
+            <button type="button" className="mv-button mv-button--primary" onClick={() => navigate("/login")}>Get Started <ArrowRight size={15} /></button>
+          </div>
+
+          <button type="button" className="mv-menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}>
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </header>
 
       <main>
-        <section className="relative overflow-hidden px-6 pb-24 pt-40 lg:px-8 lg:pb-32">
-          <div className="absolute -right-32 top-20 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" /><div className="absolute -left-40 bottom-0 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
-          <div className="relative mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1.1fr_.9fr]">
-            <div><p className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-[.18em] text-cyan-200"><span className="h-2 w-2 rounded-full bg-cyan-300" /> Built for physician review</p><h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">Make every chest X-ray review more organized.</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">MedVision AI helps physicians manage patient records, explore AI-assisted chest X-ray findings, and produce review-ready medical reports in one secure workspace.</p><div className="mt-9 flex flex-wrap gap-3"><button onClick={() => navigate("/login")} className="inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950 transition hover:bg-cyan-300">Get started <ArrowRight size={18} /></button><a href="#how-it-works" className="rounded-xl border border-white/20 px-5 py-3 font-semibold text-slate-200 transition hover:bg-white/10">See how it works</a></div><p className="mt-6 text-sm text-slate-400">AI-assisted assessment — not a definitive diagnosis.</p></div>
-            <div className="relative"><div className="rounded-[2rem] border border-white/15 bg-white/[.07] p-4 shadow-2xl shadow-cyan-950/40 backdrop-blur"><div className="rounded-[1.5rem] bg-slate-900 p-6"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-300">Analysis workspace</span><span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-300">READY FOR REVIEW</span></div><div className="mt-6 grid grid-cols-[1fr_auto] gap-5"><div className="flex min-h-64 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950"><div className="relative h-44 w-36 rounded-[50%] border border-cyan-200/50 bg-gradient-to-br from-slate-300/40 via-slate-100/10 to-slate-800/50 shadow-[inset_0_0_40px_rgba(34,211,238,.18)]"><span className="absolute left-1/2 top-5 h-28 w-px -translate-x-1/2 bg-cyan-200/40" /><span className="absolute left-7 right-7 top-1/2 border-t border-cyan-200/30" /></div></div><div className="space-y-3"><div className="rounded-xl bg-white/5 p-3"><p className="text-xs text-slate-400">Top finding</p><p className="mt-1 font-semibold text-white">Review potential findings</p></div><div className="rounded-xl bg-white/5 p-3"><p className="text-xs text-slate-400">Model</p><p className="mt-1 font-semibold text-cyan-200">DenseNet121</p></div><div className="rounded-xl bg-white/5 p-3"><p className="text-xs text-slate-400">Conditions</p><p className="mt-1 font-semibold text-white">14 classes</p></div></div></div></div></div><div className="absolute -bottom-5 -left-5 flex items-center gap-3 rounded-2xl border border-white/15 bg-slate-800/90 px-4 py-3 shadow-xl"><CheckCircle2 className="text-emerald-300" size={20} /><span className="text-sm font-semibold">Physician-reviewed workflow</span></div></div>
+        <section id="home" className="mv-hero mv-section-anchor">
+          <div className="mv-ambient mv-ambient--hero" />
+          <div className="mv-grid-lines" />
+          <div className="mv-container mv-hero__grid">
+            <div className="mv-hero__copy mv-reveal mv-reveal--one">
+              <p className="mv-kicker"><span className="mv-kicker__dot" /> AI-POWERED RADIOLOGY PLATFORM</p>
+              <h1>Smarter Radiology.<br /><span>Better Patient Care.</span></h1>
+              <p className="mv-hero__description">MedVision AI helps physicians analyze chest X-rays, manage patients, and generate comprehensive medical reports — all in one secure and intelligent platform.</p>
+              <div className="mv-hero__actions mv-reveal mv-reveal--two">
+                <button type="button" className="mv-button mv-button--primary mv-button--large" onClick={() => navigate("/login")}>Get Started <ArrowRight size={18} /></button>
+                <button type="button" className="mv-button mv-button--outline mv-button--large" onClick={() => goTo("how-it-works")}><Play size={15} fill="currentColor" /> Watch Demo</button>
+              </div>
+              <p className="mv-hero__note">AI-assisted assessment — not a definitive diagnosis.</p>
+              <div className="mv-trust-row mv-reveal mv-reveal--three">
+                <TrustItem icon={BrainCircuit} label="AI-Assisted Analysis" />
+                <TrustItem icon={ShieldCheck} label="Secure & Reliable" />
+                <TrustItem icon={Stethoscope} label="Designed for Physicians" />
+              </div>
+            </div>
+
+            <div className="mv-hero__visual mv-reveal mv-reveal--two" aria-label="Illustrative AI radiology workspace">
+              <RadiologyVisual variant="hero" />
+              <div className="mv-demo-label"><span className="mv-demo-dot" /> Illustrative interface · Demo values only</div>
+            </div>
           </div>
         </section>
 
-        <section className="bg-white px-6 py-24 text-slate-900 lg:px-8"><div className="mx-auto max-w-7xl"><div className="max-w-2xl"><p className="text-sm font-bold uppercase tracking-[.18em] text-cyan-700">A clearer clinical workspace</p><h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Turn disconnected steps into a thoughtful review loop.</h2><p className="mt-4 leading-7 text-slate-600">The platform brings patient context, model output, physician oversight, and reporting together without presenting automation as a clinical verdict.</p></div><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{features.map(([Icon, title, description]) => <article key={title} className="rounded-2xl border border-slate-200 bg-slate-50 p-6 transition hover:-translate-y-1 hover:border-cyan-200 hover:shadow-lg"><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700"><Icon size={21} /></div><h3 className="mt-5 font-semibold">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p></article>)}</div></div></section>
+        <section className="mv-stat-bar" aria-label="MedVision AI highlights">
+          <div className="mv-container mv-stat-grid">
+            <Stat value="14" label="Chest X-Ray Conditions" />
+            <Stat value="Fast" label="AI-Assisted Analysis" />
+            <Stat value="Secure" label="& Private" />
+            <Stat value="Physician" label="Focused" />
+          </div>
+        </section>
 
-        <section id="how-it-works" className="bg-slate-100 px-6 py-24 text-slate-900 lg:px-8"><div className="mx-auto max-w-7xl"><div className="text-center"><p className="text-sm font-bold uppercase tracking-[.18em] text-cyan-700">How it works</p><h2 className="mt-3 text-3xl font-semibold tracking-tight">A simple path from image to insight</h2></div><div className="mt-12 grid gap-4 md:grid-cols-5">{["Physician login", "Select or create patient", "Upload X-ray", "AI-assisted analysis", "Review and report"].map((step, index) => <div key={step} className="relative rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm"><span className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-cyan-700 text-sm font-bold text-white">{index + 1}</span><p className="mt-4 text-sm font-semibold">{step}</p>{index < 4 && <ArrowRight className="absolute -right-4 top-1/2 z-10 hidden -translate-y-1/2 text-cyan-500 md:block" size={18} />}</div>)}</div></div></section>
+        <section id="features" className="mv-section mv-section-anchor mv-healthcare">
+          <div className="mv-container">
+            <div className="mv-healthcare__grid">
+              <div className="mv-healthcare__copy mv-reveal">
+                <p className="mv-kicker">DESIGNED FOR REAL-WORLD HEALTHCARE</p>
+                <h2>Designed for Real-World Healthcare</h2>
+                <p>MedVision AI combines advanced deep learning with a physician-first approach to help you analyze chest X-rays, manage patients, and create detailed medical reports with confidence.</p>
+                <button type="button" className="mv-button mv-button--primary" onClick={() => goTo("features")}>Explore Features <ArrowRight size={16} /></button>
+                <div className="mv-support-note"><span>Technology supports.</span><span>It doesn’t replace human expertise.</span></div>
+              </div>
+              <div className="mv-healthcare__visual mv-reveal mv-reveal--two"><ClinicalMonitorVisual /></div>
+            </div>
+            <div className="mv-feature-grid">
+              {featureCards.map(([Icon, title, description], index) => (
+                <article key={title} className="mv-glass-card mv-feature-card mv-reveal" style={{ "--mv-delay": `${index * 80}ms` }}>
+                  <span className="mv-icon-box"><Icon size={21} /></span>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                  <span className="mv-card-arrow"><ChevronRight size={17} /></span>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <section className="bg-cyan-700 px-6 py-20 lg:px-8"><div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center"><div><p className="text-sm font-bold uppercase tracking-[.18em] text-cyan-100">Safety by design</p><h2 className="mt-3 text-3xl font-semibold tracking-tight">The physician stays in the loop.</h2><p className="mt-4 max-w-xl leading-7 text-cyan-50">DenseNet121 provides a multi-label classification aid across 14 chest X-ray conditions. Its probabilities and findings are supporting information for a qualified professional, not a substitute for examination, history, or clinical judgment.</p></div><div className="rounded-2xl border border-white/20 bg-white/10 p-6"><div className="flex gap-3"><LockKeyhole className="mt-1 shrink-0 text-cyan-100" size={22} /><p className="text-sm leading-6 text-cyan-50">Review every AI result, confirm the patient context, and make clinical decisions using professional judgment and applicable protocols.</p></div></div></div></section>
+        <section id="how-it-works" className="mv-section mv-section-anchor mv-workflow">
+          <div className="mv-container">
+            <SectionHeading kicker="HOW IT WORKS" title="How MedVision AI Works" subtitle="A simple and seamless workflow for smarter clinical decisions." centered />
+            <div className="mv-workflow__grid">
+              {workflowSteps.map(([Icon, title, description], index) => (
+                <div className="mv-step mv-reveal" style={{ "--mv-delay": `${index * 100}ms` }} key={title}>
+                  <div className="mv-step__icon"><Icon size={21} /></div>
+                  <span className="mv-step__number">0{index + 1}</span>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                  {index < workflowSteps.length - 1 && <ArrowRight className="mv-step__arrow" size={17} />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="technology" className="mv-section mv-section-anchor mv-technology">
+          <div className="mv-container mv-technology__grid">
+            <div className="mv-technology__visual mv-reveal"><TechnologyVisual /></div>
+            <div className="mv-technology__copy mv-reveal mv-reveal--two">
+              <p className="mv-kicker">ADVANCED AI TECHNOLOGY</p>
+              <h2>Built on DenseNet121</h2>
+              <p>MedVision AI uses a DenseNet121 deep learning model trained to classify 14 chest X-ray conditions, providing AI-assisted analysis for physicians.</p>
+              <div className="mv-tech-highlights">
+                {technologyHighlights.map(([Icon, title, description]) => <div className="mv-tech-highlight" key={title}><span className="mv-icon-box"><Icon size={18} /></span><div><strong>{title}</strong><span>{description}</span></div></div>)}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="about" className="mv-section mv-section-anchor mv-human-loop">
+          <div className="mv-container mv-human-loop__grid">
+            <div className="mv-human-loop__copy mv-reveal">
+              <p className="mv-kicker">PHYSICIAN-FIRST BY DESIGN</p>
+              <h2>Technology Supporting Human Expertise</h2>
+              <p>AI can organize information and surface patterns. It cannot replace clinical context, examination, or professional judgment.</p>
+              <ul className="mv-check-list">
+                <li><CheckCircle2 size={18} /> AI assists physicians with structured findings</li>
+                <li><CheckCircle2 size={18} /> Findings are recommendations for review</li>
+                <li><CheckCircle2 size={18} /> Physicians remain responsible for interpretation</li>
+              </ul>
+            </div>
+            <div className="mv-human-loop__card mv-glass-card mv-reveal mv-reveal--two"><div className="mv-orbit"><div className="mv-orbit__core"><HeartPulse size={31} /></div><span className="mv-orbit__node mv-orbit__node--one"><BrainCircuit size={18} /></span><span className="mv-orbit__node mv-orbit__node--two"><Stethoscope size={18} /></span></div><div><span className="mv-status-pill"><Check size={13} /> Human-in-the-loop</span><h3>Review. Interpret. Decide.</h3><p>Clinical expertise stays at the center of every assessment.</p></div></div>
+          </div>
+        </section>
+
+        <section className="mv-disclaimer">
+          <div className="mv-container"><div className="mv-disclaimer__inner"><ShieldCheck size={22} /><p><strong>Medical safety notice</strong> MedVision AI provides AI-assisted analysis for informational and clinical decision-support purposes. It is not a definitive diagnosis and should not replace professional medical judgment.</p></div></div>
+        </section>
+
+        <section className="mv-section mv-final-cta">
+          <div className="mv-ambient mv-ambient--cta" />
+          <div className="mv-container mv-final-cta__inner mv-reveal"><p className="mv-kicker">A MORE THOUGHTFUL REVIEW LOOP</p><h2>Join the Future of Radiology</h2><p>Experience a smarter, more organized approach to AI-assisted medical analysis.</p><div className="mv-hero__actions"><button type="button" className="mv-button mv-button--primary mv-button--large" onClick={() => navigate("/login")}>Get Started <ArrowRight size={18} /></button><button type="button" className="mv-button mv-button--outline mv-button--large" onClick={() => goTo("about")}>Contact Us</button></div></div>
+        </section>
       </main>
-      <footer className="border-t border-white/10 bg-slate-950 px-6 py-8 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between"><p className="font-semibold text-white">MedVision AI</p><p>AI-assisted medical report management for physician review.</p><button onClick={() => navigate("/login")} className="text-left text-cyan-300 hover:text-cyan-200 sm:text-right">Open physician workspace →</button></div></footer>
+
+      <footer id="contact" className="mv-footer">
+        <div className="mv-container"><div className="mv-footer__top"><button className="mv-brand" type="button" onClick={() => goTo("home")}><span className="mv-brand__mark"><HeartPulse size={22} strokeWidth={2.3} /></span><span><strong>MedVision AI</strong><small>AI for a Healthier Tomorrow</small></span></button><p>AI-assisted medical imaging intelligence for physician review.</p><div className="mv-footer__links">{navItems.map(([label, id]) => <button key={id} type="button" onClick={() => goTo(id)}>{label}</button>)}<button type="button" onClick={() => goTo("contact")}>Contact</button></div></div><div className="mv-footer__bottom"><span>© {new Date().getFullYear()} MedVision AI. All rights reserved.</span><span>AI-assisted analysis · Human expertise first</span><span><button type="button">Privacy Policy</button><button type="button">Terms of Service</button></span></div></div>
+      </footer>
     </div>
   );
+}
+
+function TrustItem({ icon: Icon, label }) {
+  return <div className="mv-trust-item"><span className="mv-trust-item__icon"><Icon size={18} /></span><span>{label}</span></div>;
+}
+
+function Stat({ value, label }) {
+  return <div className="mv-stat"><strong>{value}</strong><span>{label}</span></div>;
+}
+
+function SectionHeading({ kicker, title, subtitle, centered = false }) {
+  return <div className={`mv-section-heading ${centered ? "mv-section-heading--centered" : ""}`}><p className="mv-kicker">{kicker}</p><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div>;
+}
+
+function RadiologyVisual({ variant = "hero" }) {
+  return <div className={`mv-radiology-visual mv-radiology-visual--${variant}`}><div className="mv-xray-frame"><div className="mv-xray-glow" /><div className="mv-scan-line" /><div className="mv-xray"><div className="mv-xray__spine" /><div className="mv-xray__lung mv-xray__lung--left" /><div className="mv-xray__lung mv-xray__lung--right" /><div className="mv-xray__ribs" /></div><div className="mv-frame-corner mv-frame-corner--tl" /><div className="mv-frame-corner mv-frame-corner--tr" /><div className="mv-frame-corner mv-frame-corner--bl" /><div className="mv-frame-corner mv-frame-corner--br" /></div><div className="mv-float-card mv-float-card--analysis"><div className="mv-float-card__title"><BrainCircuit size={15} /> AI Analysis</div><div className="mv-complete"><CheckCircle2 size={15} /> Complete</div></div><div className="mv-float-card mv-float-card--condition"><span>Detected Condition</span><strong><Activity size={15} /> Pneumonia</strong><small>Confidence: 87%</small></div><div className="mv-float-card mv-float-card--findings"><strong>AI Findings</strong><Finding name="Pneumonia" value="87%" active /><Finding name="Effusion" value="12%" /><Finding name="Atelectasis" value="8%" /><Finding name="Cardiomegaly" value="3%" /></div><div className="mv-visual-note">Technology<br />supporting<br /><em>human expertise</em></div></div>;
+}
+
+function Finding({ name, value, active = false }) {
+  return <div className={`mv-finding ${active ? "mv-finding--active" : ""}`}><span><i />{name}</span><b>{value}</b></div>;
+}
+
+function ClinicalMonitorVisual() {
+  return <div className="mv-monitor-visual"><div className="mv-monitor-visual__screen"><div className="mv-mini-xray"><div className="mv-mini-xray__spine" /><div className="mv-mini-xray__lung mv-mini-xray__lung--left" /><div className="mv-mini-xray__lung mv-mini-xray__lung--right" /></div><div className="mv-monitor-panel"><span>AI findings</span><b>Review required</b><div /><div /><div /></div></div><span className="mv-monitor-visual__stand" /></div>;
+}
+
+function TechnologyVisual() {
+  return <div className="mv-tech-visual"><div className="mv-tech-visual__images"><div className="mv-tech-xray"><div className="mv-xray__spine" /><div className="mv-xray__lung mv-xray__lung--left" /><div className="mv-xray__lung mv-xray__lung--right" /></div><div className="mv-tech-xray mv-tech-xray--highlight"><span className="mv-hotspot" /></div></div><div className="mv-probability-card"><div><strong>AI prediction</strong><span>Illustrative demo</span></div><div className="mv-probability"><span>Pneumonia</span><b>87%</b><i style={{ "--bar": "87%" }} /></div><div className="mv-probability"><span>Effusion</span><b>12%</b><i style={{ "--bar": "12%" }} /></div><div className="mv-probability"><span>Other findings</span><b>08%</b><i style={{ "--bar": "8%" }} /></div></div></div>;
 }

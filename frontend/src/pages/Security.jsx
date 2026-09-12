@@ -75,9 +75,9 @@ export default function Security() {
     }
   };
   return (
-    <div className="space-y-6 px-6 py-6 lg:px-8">
+    <div className="page-enter space-y-6 px-6 py-6 lg:px-8">
       {/* ================= HEADER ================= */}
-      <div>
+      <div className="page-heading">
         <h1 className="text-2xl font-bold text-slate-900">Security</h1>
 
         <p className="mt-1 text-sm text-slate-500">

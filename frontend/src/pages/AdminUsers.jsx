@@ -53,24 +53,24 @@ export default function AdminUsers() {
   };
 
   return (
-    <main className="p-6 lg:p-10">
+    <main className="page-enter p-6 lg:p-10">
       <div className="mx-auto max-w-7xl">
         <PageHeading title="Users and physicians" description="Review registered accounts and their assigned roles." />
-        <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row">
+        <div className="surface-card mt-7 flex flex-col gap-3 rounded-2xl p-4 shadow-sm sm:flex-row">
           <label className="relative flex-1">
             <Search className="absolute left-3 top-3 text-slate-400" size={18} />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or email" className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 outline-none focus:border-cyan-500" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or email" className="field-input py-2.5 pl-10 pr-3" />
           </label>
-          <select value={role} onChange={(event) => setRole(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-cyan-500">
+          <select value={role} onChange={(event) => setRole(event.target.value)} className="field-select px-3 py-2.5">
             <option value="">All roles</option>
             <option value="PHYSICIAN">Physicians</option>
             <option value="ADMIN">Admins</option>
           </select>
         </div>
 
-        {feedback && <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">{feedback}</div>}
+        {feedback && <div className="alert-success mt-4 rounded-xl px-4 py-3 text-sm font-medium">{feedback}</div>}
 
-        <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="table-shell mt-5">
           {state.loading ? <div className="p-10 text-center text-slate-500">Loading users…</div> : state.error ? <div className="p-6 text-red-700">{state.error}</div> : !data.users.length ? <EmptyState /> : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-left text-sm">

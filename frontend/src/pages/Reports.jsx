@@ -137,7 +137,7 @@ function Reports() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-8">
+      <div className="page-enter min-h-screen bg-slate-50 p-8">
         <div className="flex min-h-[400px] items-center justify-center">
           <div className="flex items-center gap-3 text-slate-600">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -153,12 +153,12 @@ function Reports() {
   // =========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8">
+    <div className="page-enter min-h-screen bg-slate-50 p-6 md:p-8">
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <div className="mb-8">
+      <div className="page-heading mb-8">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-blue-100 p-3">
             <FileText className="h-7 w-7 text-blue-600" />

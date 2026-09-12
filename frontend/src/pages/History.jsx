@@ -203,7 +203,7 @@ export default function History() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="page-enter min-h-screen bg-slate-50">
         <div className="mx-auto flex min-h-[70vh] max-w-7xl items-center justify-center">
           <div className="flex flex-col items-center">
             <Loader2 size={36} className="animate-spin text-cyan-700" />
@@ -222,12 +222,12 @@ export default function History() {
   // ==========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="page-enter min-h-screen bg-slate-50">
       {/* ======================================================
           Header
       ====================================================== */}
 
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="mx-auto max-w-7xl px-6 py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

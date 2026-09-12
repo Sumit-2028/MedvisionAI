@@ -168,7 +168,7 @@ function Patients() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="page-enter min-h-screen px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="animate-pulse space-y-6">
             <div>
@@ -194,13 +194,13 @@ function Patients() {
   // =========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="page-enter min-h-screen px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* =====================================================
             HEADER
         ===================================================== */}
 
-        <div className="mb-8">
+        <div className="page-heading mb-8">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Patients
           </h1>

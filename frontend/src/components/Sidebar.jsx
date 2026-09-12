@@ -135,8 +135,9 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[2px] transition-opacity lg:hidden"
           onClick={() => setMobileOpen(false)}
+          aria-label="Close navigation"
         />
       )}
 
@@ -155,7 +156,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
           border-r
           border-slate-200
           bg-white
-          shadow-sm
+          shadow-[8px_0_30px_rgba(16,35,63,0.06)]
           transition-all
           duration-300
 
@@ -188,7 +189,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
           >
             {/* Logo */}
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-sm">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-700 text-white shadow-sm shadow-cyan-900/20">
               <HeartPulse size={25} strokeWidth={2.2} />
             </div>
 
@@ -246,6 +247,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
                       onClick={() => handleNavigation(item.path)}
                       title={collapsed ? item.label : undefined}
                       className={`
+                    nav-item
                     group
                     flex
                     w-full
@@ -303,7 +305,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
                     key={path}
                     onClick={() => handleNavigation(path)}
                     title={collapsed ? label : undefined}
-                    className={`flex w-full items-center rounded-xl py-3 text-sm font-medium transition ${collapsed ? "justify-center px-2" : "gap-3 px-4"} ${isActive(path) ? "bg-cyan-50 text-cyan-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                    className={`nav-item flex w-full items-center rounded-xl py-3 text-sm font-medium transition ${collapsed ? "justify-center px-2" : "gap-3 px-4"} ${isActive(path) ? "bg-cyan-50 text-cyan-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
                   >
                     <Icon size={19} className="shrink-0" />
                     {!collapsed && <span>{label}</span>}
@@ -330,7 +332,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
             <button
               onClick={() => handleNavigation("/settings")}
               title={collapsed ? "Settings" : undefined}
-              className={`
+              className={`nav-item
     flex
     w-full
     items-center
@@ -362,7 +364,7 @@ export default function Sidebar({ collapsed, mobileOpen, setMobileOpen }) {
             <button
               onClick={() => handleNavigation("/security")}
               title={collapsed ? "Security" : undefined}
-              className={`
+              className={`nav-item
     flex
     w-full
     items-center

@@ -154,7 +154,7 @@ export default function Dashboard() {
   // ==========================================================
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="app-page min-h-screen">
       {/* ======================================================
           Dashboard Content
       ====================================================== */}
@@ -165,7 +165,7 @@ export default function Dashboard() {
         ==================================================== */}
 
         <section className="mb-7">
-          <div className="rounded-2xl bg-gradient-to-r from-cyan-700 to-cyan-600 p-7 text-white shadow-sm sm:p-8">
+          <div className="rounded-2xl bg-gradient-to-r from-cyan-800 to-cyan-700 p-7 text-white shadow-lg shadow-cyan-900/10 sm:p-8">
             <div className="max-w-2xl">
               {/* Badge */}
 
@@ -191,7 +191,7 @@ export default function Dashboard() {
 
               <button
                 onClick={() => navigate("/analyze")}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-cyan-700 shadow-sm transition hover:bg-cyan-50"
+                className="btn-secondary mt-6 bg-white px-5 py-3 text-sm text-cyan-700 shadow-sm hover:bg-cyan-50"
               >
                 <Upload size={18} />
                 Analyze New X-Ray
@@ -212,7 +212,7 @@ export default function Dashboard() {
             return (
               <div
                 key={stat.title}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                className="surface-card rounded-2xl p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -247,7 +247,7 @@ export default function Dashboard() {
               Start Analysis Card
           ================================================== */}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <div className="surface-card rounded-2xl p-6 shadow-sm xl:col-span-2">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">
@@ -282,7 +282,7 @@ export default function Dashboard() {
 
               <button
                 onClick={() => navigate("/analyze")}
-                className="mt-5 rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cyan-700"
+                className="btn-primary mt-5 px-5 py-2.5 text-sm"
               >
                 Select X-Ray
               </button>
@@ -293,7 +293,7 @@ export default function Dashboard() {
               AI Information
           ================================================== */}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="surface-card rounded-2xl p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                 <ShieldCheck size={22} />
@@ -360,7 +360,7 @@ export default function Dashboard() {
             Recent Reports
         ==================================================== */}
 
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="surface-card mt-6 rounded-2xl p-6 shadow-sm">
           {/* Header */}
 
           <div className="flex items-center justify-between">
@@ -392,9 +392,7 @@ export default function Dashboard() {
 
             {loadingReports && (
               <div className="flex min-h-28 items-center justify-center rounded-xl bg-slate-50">
-                <p className="text-sm text-slate-400">
-                  Loading recent reports...
-                </p>
+                <div className="w-full space-y-3 p-2"><div className="skeleton h-4 w-1/3" /><div className="skeleton h-4 w-2/3" /><div className="skeleton h-4 w-1/2" /></div>
               </div>
             )}
 

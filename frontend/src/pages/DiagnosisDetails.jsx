@@ -104,7 +104,7 @@ function DiagnosisDetails() {
   // =========================================================
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 px-6 py-8">
+      <div className="page-enter min-h-screen bg-slate-50 px-6 py-8">
         <div className="mx-auto max-w-7xl">
           <div className="animate-pulse space-y-6">
             <div className="h-8 w-64 rounded-lg bg-slate-200" />
@@ -121,7 +121,7 @@ function DiagnosisDetails() {
   // =========================================================
   if (error && !diagnosis) {
     return (
-      <div className="min-h-screen bg-slate-50 px-6 py-8">
+      <div className="page-enter min-h-screen bg-slate-50 px-6 py-8">
         <div className="mx-auto max-w-4xl">
           <button
             onClick={() => navigate("/history")}
@@ -209,7 +209,7 @@ function DiagnosisDetails() {
     : "Not available";
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="page-enter min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         {/* =====================================================
             TOP HEADER

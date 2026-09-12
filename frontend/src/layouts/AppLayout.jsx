@@ -61,7 +61,7 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
+    <div className="app-shell min-h-screen text-slate-800">
       {/* ======================================================
           GLOBAL SIDEBAR
       ====================================================== */}
@@ -80,7 +80,7 @@ export default function AppLayout() {
       {/* ====================================================== */}
 
       <div
-        className={`
+        className={`app-content
           min-h-screen
           transition-all
           duration-300
@@ -92,7 +92,7 @@ export default function AppLayout() {
             TOP NAVBAR
         ==================================================== */}
 
-        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200/90 bg-white/90 px-5 backdrop-blur-xl sm:px-8">
           {/* --------------------------------------------------
               Left Side
           -------------------------------------------------- */}
@@ -139,6 +139,7 @@ export default function AppLayout() {
             <button
               className="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 transition hover:bg-slate-50"
               title="Notifications"
+              aria-label="Notifications"
             >
               <Bell size={19} />
 
@@ -170,7 +171,9 @@ export default function AppLayout() {
         {/* here through <Outlet />. */}
         {/* ==================================================== */}
 
-        <Outlet />
+        <div className="page-enter">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

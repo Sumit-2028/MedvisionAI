@@ -206,7 +206,7 @@ function Login() {
   // ============================================================
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="page-enter min-h-screen bg-slate-50">
       {/* =====================================================
           LEFT BRAND PANEL
           ===================================================== */}
@@ -292,7 +292,7 @@ function Login() {
             LOGIN SECTION
             =================================================== */}
 
-        <section className="flex items-center justify-center px-5 py-10 sm:px-8">
+        <section className="flex items-center justify-center bg-white px-5 py-10 sm:px-8">
           <div className="w-full max-w-md">
             {/* Mobile Logo */}
 
